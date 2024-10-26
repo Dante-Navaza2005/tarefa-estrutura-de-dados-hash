@@ -1,0 +1,13 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "C/C++ Runner: Debug Session",
+      "type": "lldb",
+      "request": "launch",
+      "args": [],
+      "cwd": "/Users/dantegates/Documents/GitHub/tarefa-estrutura-de-dados-hash",
+      "program": "/Users/dantegates/Documents/GitHub/tarefa-estrutura-de-dados-hash/build/Debug/outDebug"
+    }
+  ]
+}
