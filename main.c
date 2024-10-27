@@ -122,6 +122,7 @@ int main() {
 
     printf("Número de colisões: %d\n", colisoesTotais);
     printf("Número de posições vazias: %d\n", posicoesVazias);
+    printf("Fator de carga: %.3f\n", 1000.0/TABLE_SIZE);
 
     // Libera memória alocada
     free(hashTable->tabela);
