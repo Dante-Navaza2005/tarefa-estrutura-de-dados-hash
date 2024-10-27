@@ -13,15 +13,14 @@ typedef struct {
     int tamanho;
 } HashTable;
 
-// Função hash usando método da multiplicação por uma constante
-int hashFunc(unsigned long cpf, int tamanho) {
-    unsigned long k = 2654435761; // Constante para dispersão uniforme
-    return (cpf * k) % tamanho;
+// Função hash usando o método da divisão
+int hashFuncDivisao(unsigned long cpf, int tamanho) {
+    return cpf % tamanho; // Tamanho deve ser um número primo
 }
 
-// Função para tentativa quadrática
-int hashFuncQuadratica(unsigned long cpf, int i, int tamanho) {
-    return (hashFunc(cpf, tamanho) + i * i) % tamanho;
+// Segunda função hash para dispersão dupla (para endereçamento aberto)
+int hashFunc2(unsigned long cpf, int tamanho) {
+    return 1 + (cpf % (tamanho - 1)); // Deve ser co-prima ao tamanho da tabela
 }
 
 HashTable *inicializaTabela(int tamanho) {
@@ -38,7 +37,8 @@ HashTable *inicializaTabela(int tamanho) {
 void insereCPF(HashTable *hashTable, unsigned long cpf) {
     int index, i = 0;
     do {
-        index = hashFuncQuadratica(cpf, i, hashTable->tamanho);
+        // Usando a função de divisão como hash principal e dispersão dupla para tratar colisões
+        index = (hashFuncDivisao(cpf, hashTable->tamanho) + i * hashFunc2(cpf, hashTable->tamanho)) % hashTable->tamanho;
         i++;
     } while (hashTable->tabela[index].ocupado == 1 && i < hashTable->tamanho);
 
@@ -54,7 +54,7 @@ int contaColisoes(HashTable *hashTable) {
     int colisoes = 0;
     for (int i = 0; i < hashTable->tamanho; i++) {
         if (hashTable->tabela[i].ocupado == 1) {
-            int index = hashFunc(hashTable->tabela[i].cpf, hashTable->tamanho);
+            int index = hashFuncDivisao(hashTable->tabela[i].cpf, hashTable->tamanho);
             if (index != i) {
                 colisoes++;
             }
@@ -81,7 +81,7 @@ int validaCPF(unsigned long cpf) {
 int main() {
     HashTable *hashTable = inicializaTabela(TABLE_SIZE);
 
-    FILE *arquivo = fopen("cpfs_gerados.txt", "r");
+    FILE *arquivo = fopen("cpfs.txt", "r");
     if (arquivo == NULL) {
         perror("Erro ao abrir o arquivo");
         return 1;
@@ -104,7 +104,7 @@ int main() {
             printf("Aviso: CPF inválido ignorado: %lu\n", cpf);
             continue;
         }
-        insereCPF(hashTable, cpf);
+        insereCPF(hashTable, cpf); // Usando o método da Divisão com endereçamento aberto e dispersão dupla
         insercoes++;
 
         if (insercoes % 100 == 0) {
@@ -122,7 +122,7 @@ int main() {
 
     printf("Número de colisões: %d\n", colisoesTotais);
     printf("Número de posições vazias: %d\n", posicoesVazias);
-    printf("Fator de carga: %.3f\n", 1000.0/TABLE_SIZE);
+    printf("Fator de carga: %.3f\n", 1000.0 / TABLE_SIZE);
 
     // Libera memória alocada
     free(hashTable->tabela);
