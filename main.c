@@ -2,22 +2,19 @@
 #include <stdlib.h>
 #include <math.h>
 
-#define TABLE_SIZE 1499 // Escolhido um número primo próximo
+#define TABLE_SIZE 2003 // Escolhido um número primo maior para melhorar a dispersão
 
 typedef struct {
     unsigned long cpf;
     int ocupado; // 0 para livre, 1 para ocupado
 } HashEntry;
 
-// Função de hash com multiplicação para melhor distribuição
+// Função de hash combinada com operações de bits
 int hashFunc(unsigned long cpf) {
-    double A = (sqrt(5) - 1) / 2.0; // Constante irracional
-    return (int)(TABLE_SIZE * fmod(cpf * A, 1.0));
-}
-
-// Função de hash auxiliar para duplo hashing
-int hashFuncAux(unsigned long cpf) {
-    return 1 + (cpf % (TABLE_SIZE - 1));
+    cpf = ((cpf >> 16) ^ cpf) * 0x45d9f3b; // Combinação de bits para dispersão
+    cpf = ((cpf >> 16) ^ cpf) * 0x45d9f3b;
+    cpf = (cpf >> 16) ^ cpf;
+    return cpf % TABLE_SIZE;
 }
 
 void inicializaTabela(HashEntry tabela[]) {
@@ -29,12 +26,13 @@ void inicializaTabela(HashEntry tabela[]) {
 int insereCPF(HashEntry tabela[], unsigned long cpf) {
     int index = hashFunc(cpf);
     int colisoes = 0;
-    int hashAux = hashFuncAux(cpf);
 
-    // Sondagem dupla (endereçamento aberto com duplo hashing)
+    // Sondagem quadrática
+    int i = 1;
     while (tabela[index].ocupado) {
         colisoes++;
-        index = (index + hashAux) % TABLE_SIZE; // Avanço usando hash auxiliar
+        index = (index + i * i) % TABLE_SIZE; // Avanço quadrático
+        i++;
     }
 
     tabela[index].cpf = cpf;
@@ -58,7 +56,6 @@ int main() {
     inicializaTabela(tabela);
 
     FILE *arquivo = fopen("cpfs_gerados.txt", "r");
-
     if (arquivo == NULL) {
         perror("Erro ao abrir o arquivo");
         return 1;
