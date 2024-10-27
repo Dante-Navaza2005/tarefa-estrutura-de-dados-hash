@@ -1,12 +1,11 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#define TABLE_SIZE 2003 // Número primo para a tabela
+#define TABLE_SIZE 2003 // Número primo para tabela
 
-// Estrutura de entrada da tabela hash
 typedef struct {
     unsigned long cpf;
-    int ocupado; // 0 para livre, 1 para ocupado
+    int ocupado; // 0 = vazio, 1 = ocupado, 2 = removido
 } HashEntry;
 
 typedef struct {
@@ -14,40 +13,47 @@ typedef struct {
     int tamanho;
 } HashTable;
 
-// Função hash usando método da divisão
+// Função hash usando método da multiplicação por uma constante
 int hashFunc(unsigned long cpf, int tamanho) {
-    return cpf % tamanho;
+    unsigned long k = 2654435761; // Constante para dispersão uniforme
+    return (cpf * k) % tamanho;
+}
+
+// Função para tentativa quadrática
+int hashFuncQuadratica(unsigned long cpf, int i, int tamanho) {
+    return (hashFunc(cpf, tamanho) + i * i) % tamanho;
 }
 
 HashTable *inicializaTabela(int tamanho) {
     HashTable *hashTable = (HashTable *)malloc(sizeof(HashTable));
-    hashTable->tabela = (HashEntry *)calloc(tamanho, sizeof(HashEntry));
+    hashTable->tabela = (HashEntry *)malloc(tamanho * sizeof(HashEntry));
     hashTable->tamanho = tamanho;
+    for (int i = 0; i < tamanho; i++) {
+        hashTable->tabela[i].ocupado = 0; // Inicializa todas as entradas como vazias
+        hashTable->tabela[i].cpf = 0; // Inicializa o CPF como zero
+    }
     return hashTable;
 }
 
 void insereCPF(HashTable *hashTable, unsigned long cpf) {
-    int index = hashFunc(cpf, hashTable->tamanho);
-    int tentativas = 0;
+    int index, i = 0;
+    do {
+        index = hashFuncQuadratica(cpf, i, hashTable->tamanho);
+        i++;
+    } while (hashTable->tabela[index].ocupado == 1 && i < hashTable->tamanho);
 
-    // Sondagem linear para encontrar um espaço vazio
-    while (hashTable->tabela[index].ocupado && tentativas < hashTable->tamanho) {
-        index = (index + 1) % hashTable->tamanho;
-        tentativas++;
-    }
-
-    if (tentativas < hashTable->tamanho) {
+    if (i < hashTable->tamanho) {
         hashTable->tabela[index].cpf = cpf;
         hashTable->tabela[index].ocupado = 1;
     } else {
-        printf("Tabela hash está cheia. Não foi possível inserir o CPF %lu\n", cpf);
+        printf("Erro: Tabela cheia, não foi possível inserir o CPF %lu.\n", cpf);
     }
 }
 
 int contaColisoes(HashTable *hashTable) {
     int colisoes = 0;
     for (int i = 0; i < hashTable->tamanho; i++) {
-        if (hashTable->tabela[i].ocupado) {
+        if (hashTable->tabela[i].ocupado == 1) {
             int index = hashFunc(hashTable->tabela[i].cpf, hashTable->tamanho);
             if (index != i) {
                 colisoes++;
@@ -60,16 +66,16 @@ int contaColisoes(HashTable *hashTable) {
 int contaPosicoesVazias(HashTable *hashTable) {
     int vazias = 0;
     for (int i = 0; i < hashTable->tamanho; i++) {
-        if (!hashTable->tabela[i].ocupado) {
+        if (hashTable->tabela[i].ocupado == 0) {
             vazias++;
         }
     }
     return vazias;
 }
 
-void liberaTabela(HashTable *hashTable) {
-    free(hashTable->tabela);
-    free(hashTable);
+int validaCPF(unsigned long cpf) {
+    // Valida o comprimento do CPF (no caso, assume 11 dígitos)
+    return (cpf >= 10000000000 && cpf <= 99999999999);
 }
 
 int main() {
@@ -94,6 +100,10 @@ int main() {
     int insercoes = 0;
 
     while (fscanf(arquivo, "%lu", &cpf) != EOF && insercoes < 1000) {
+        if (!validaCPF(cpf)) {
+            printf("Aviso: CPF inválido ignorado: %lu\n", cpf);
+            continue;
+        }
         insereCPF(hashTable, cpf);
         insercoes++;
 
@@ -113,7 +123,9 @@ int main() {
     printf("Número de colisões: %d\n", colisoesTotais);
     printf("Número de posições vazias: %d\n", posicoesVazias);
 
-    liberaTabela(hashTable);
+    // Libera memória alocada
+    free(hashTable->tabela);
+    free(hashTable);
 
     return 0;
 }
