@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#define TABLE_SIZE 4093 // Número primo maior para reduzir colisões
+#define TABLE_SIZE 2003 // Número primo para tabela
 
 // Estrutura para lista encadeada (encadeamento exterior)
 typedef struct Nodo {
@@ -18,11 +18,8 @@ typedef struct {
     int tamanho;
 } HashTable;
 
-// Função hash aprimorada com operações de mistura de bits
+// Função hash usando método da divisão
 int hashFunc(unsigned long cpf, int tamanho) {
-    cpf = ((cpf >> 16) ^ cpf) * 0x45d9f3b;
-    cpf = ((cpf >> 16) ^ cpf) * 0x45d9f3b;
-    cpf = (cpf >> 16) ^ cpf;
     return cpf % tamanho;
 }
 
