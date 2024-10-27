@@ -1,16 +1,12 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#define TABLE_SIZE 2003 // Número primo para tabela
+#define TABLE_SIZE 2003 // Número primo para a tabela
 
-// Estrutura para lista encadeada (encadeamento exterior)
-typedef struct Nodo {
-    unsigned long cpf;
-    struct Nodo *proximo;
-} Nodo;
-
+// Estrutura de entrada da tabela hash
 typedef struct {
-    Nodo *lista; // Ponteiro para o início da lista de colisões
+    unsigned long cpf;
+    int ocupado; // 0 para livre, 1 para ocupado
 } HashEntry;
 
 typedef struct {
@@ -32,23 +28,30 @@ HashTable *inicializaTabela(int tamanho) {
 
 void insereCPF(HashTable *hashTable, unsigned long cpf) {
     int index = hashFunc(cpf, hashTable->tamanho);
-    Nodo *novoNodo = (Nodo *)malloc(sizeof(Nodo));
-    novoNodo->cpf = cpf;
-    novoNodo->proximo = hashTable->tabela[index].lista;
-    hashTable->tabela[index].lista = novoNodo;
+    int tentativas = 0;
+
+    // Sondagem linear para encontrar um espaço vazio
+    while (hashTable->tabela[index].ocupado && tentativas < hashTable->tamanho) {
+        index = (index + 1) % hashTable->tamanho;
+        tentativas++;
+    }
+
+    if (tentativas < hashTable->tamanho) {
+        hashTable->tabela[index].cpf = cpf;
+        hashTable->tabela[index].ocupado = 1;
+    } else {
+        printf("Tabela hash está cheia. Não foi possível inserir o CPF %lu\n", cpf);
+    }
 }
 
 int contaColisoes(HashTable *hashTable) {
     int colisoes = 0;
     for (int i = 0; i < hashTable->tamanho; i++) {
-        Nodo *atual = hashTable->tabela[i].lista;
-        int count = 0;
-        while (atual != NULL) {
-            count++;
-            atual = atual->proximo;
-        }
-        if (count > 1) {
-            colisoes += (count - 1); // Contabiliza colisões
+        if (hashTable->tabela[i].ocupado) {
+            int index = hashFunc(hashTable->tabela[i].cpf, hashTable->tamanho);
+            if (index != i) {
+                colisoes++;
+            }
         }
     }
     return colisoes;
@@ -57,11 +60,16 @@ int contaColisoes(HashTable *hashTable) {
 int contaPosicoesVazias(HashTable *hashTable) {
     int vazias = 0;
     for (int i = 0; i < hashTable->tamanho; i++) {
-        if (hashTable->tabela[i].lista == NULL) {
+        if (!hashTable->tabela[i].ocupado) {
             vazias++;
         }
     }
     return vazias;
+}
+
+void liberaTabela(HashTable *hashTable) {
+    free(hashTable->tabela);
+    free(hashTable);
 }
 
 int main() {
@@ -84,7 +92,6 @@ int main() {
 
     unsigned long cpf;
     int insercoes = 0;
-    int colisoesPorInsercao[10] = {0};
 
     while (fscanf(arquivo, "%lu", &cpf) != EOF && insercoes < 1000) {
         insereCPF(hashTable, cpf);
@@ -92,7 +99,6 @@ int main() {
 
         if (insercoes % 100 == 0) {
             int colisoes = contaColisoes(hashTable);
-            colisoesPorInsercao[insercoes / 100 - 1] = colisoes;
             // Escreve o número de inserções e de colisões no CSV
             fprintf(saida, "%d,%d\n", insercoes, colisoes);
         }
@@ -107,17 +113,7 @@ int main() {
     printf("Número de colisões: %d\n", colisoesTotais);
     printf("Número de posições vazias: %d\n", posicoesVazias);
 
-    // Libera memória alocada
-    for (int i = 0; i < hashTable->tamanho; i++) {
-        Nodo *atual = hashTable->tabela[i].lista;
-        while (atual != NULL) {
-            Nodo *temp = atual;
-            atual = atual->proximo;
-            free(temp);
-        }
-    }
-    free(hashTable->tabela);
-    free(hashTable);
+    liberaTabela(hashTable);
 
     return 0;
 }
