@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <math.h> // Biblioteca para a função log
 
 #define TABLE_SIZE 1213 // Número primo para tabela
 
@@ -73,6 +74,28 @@ int contaPosicoesVazias(HashTable *hashTable) {
     return vazias;
 }
 
+// Função para buscar um CPF específico na tabela hash e contar colisões durante a busca
+void buscaCPF(HashTable *hashTable, unsigned long cpf) {
+    int index, i = 0, colisoes = 0;
+    do {
+        // Usando a função de divisão como hash principal e dispersão dupla para tratar colisões
+        index = (hashFuncDivisao(cpf, hashTable->tamanho) + i * hashFunc2(cpf, hashTable->tamanho)) % hashTable->tamanho;
+        
+        if (hashTable->tabela[index].ocupado == 0) {
+            // Caso encontre uma posição vazia durante a busca
+            printf("Posição %d está vazia.\n", index);
+        } else if (hashTable->tabela[index].ocupado == 1 && hashTable->tabela[index].cpf == cpf) {
+            printf("CPF %lu encontrado na posição %d com %d colisões durante a busca.\n", cpf, index, colisoes);
+            return;
+        }
+
+        i++;
+        colisoes++;
+    } while (hashTable->tabela[index].ocupado != 0 && i < hashTable->tamanho);
+
+    printf("CPF %lu não encontrado na tabela. Número de colisões durante a busca: %d\n", cpf, colisoes);
+}
+
 int main() {
     HashTable *hashTable = inicializaTabela(TABLE_SIZE);
 
@@ -89,7 +112,7 @@ int main() {
     }
 
     // Escreve o cabeçalho do CSV
-    fprintf(saida, "Chaves Inseridas,Colisoes\n");
+    fprintf(saida, "Chaves Inseridas,Colisoes,Log(N)\n");
 
     unsigned long cpf;
     int insercoes = 0;
@@ -100,8 +123,9 @@ int main() {
 
         if (insercoes % 100 == 0) {
             int colisoes = contaColisoes(hashTable);
-            // Escreve o número de inserções e de colisões no CSV
-            fprintf(saida, "%d,%d\n", insercoes, colisoes);
+            double logN = log2(insercoes); // Calcula o logaritmo natural de N (ou seja, ln(N))
+            // Escreve o número de inserções, de colisões e o valor de log(N) no CSV
+            fprintf(saida, "%d,%d,%.3f\n", insercoes, colisoes, logN);
         }
     }
 
@@ -114,6 +138,10 @@ int main() {
     printf("Número de colisões: %d\n", colisoesTotais);
     printf("Número de posições vazias: %d\n", posicoesVazias);
     printf("Fator de carga: %.3f\n", 1000.0 / TABLE_SIZE);
+
+    // Teste de busca de um CPF específico
+    printf("\nTeste de busca de CPF:\n");
+    buscaCPF(hashTable, 69997097939); // Insira o CPF que deseja buscar
 
     // Libera memória alocada
     free(hashTable->tabela);
