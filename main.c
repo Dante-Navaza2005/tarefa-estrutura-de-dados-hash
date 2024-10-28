@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#define TABLE_SIZE 2003 // Número primo para tabela
+#define TABLE_SIZE 1213 // Número primo para tabela
 
 typedef struct {
     unsigned long cpf;
@@ -73,11 +73,6 @@ int contaPosicoesVazias(HashTable *hashTable) {
     return vazias;
 }
 
-int validaCPF(unsigned long cpf) {
-    // Valida o comprimento do CPF (no caso, assume 11 dígitos)
-    return (cpf >= 10000000000 && cpf <= 99999999999);
-}
-
 int main() {
     HashTable *hashTable = inicializaTabela(TABLE_SIZE);
 
@@ -100,10 +95,6 @@ int main() {
     int insercoes = 0;
 
     while (fscanf(arquivo, "%lu", &cpf) != EOF && insercoes < 1000) {
-        if (!validaCPF(cpf)) {
-            printf("Aviso: CPF inválido ignorado: %lu\n", cpf);
-            continue;
-        }
         insereCPF(hashTable, cpf); // Usando o método da Divisão com endereçamento aberto e dispersão dupla
         insercoes++;
 
