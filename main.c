@@ -35,15 +35,34 @@ HashTable *inicializaTabela(int tamanho) {
     return hashTable;
 }
 
-void insereCPF(HashTable *hashTable, unsigned long cpf) {
+// Função para buscar um CPF específico na tabela hash e contar colisões durante a busca
+int buscaCPF(HashTable *hashTable, unsigned long cpf, int *colisoes) {
     int index, i = 0;
+    *colisoes = 0;
     do {
         // Usando a função de divisão como hash principal e dispersão dupla para tratar colisões
         index = (hashFuncDivisao(cpf, hashTable->tamanho) + i * hashFunc2(cpf, hashTable->tamanho)) % hashTable->tamanho;
-        i++;
-    } while (hashTable->tabela[index].ocupado == 1 && i < hashTable->tamanho);
+        
+        if (hashTable->tabela[index].ocupado == 0) {
+            // Caso encontre uma posição vazia durante a busca
+            return index; // Retorna a posição vazia para inserção
+        } else if (hashTable->tabela[index].ocupado == 1 && hashTable->tabela[index].cpf == cpf) {
+            return -1; // CPF já existente
+        }
 
-    if (i < hashTable->tamanho) {
+        i++;
+        (*colisoes)++;
+    } while (hashTable->tabela[index].ocupado != 0 && i < hashTable->tamanho);
+
+    return index; // Retorna a posição encontrada ou o índice final verificado
+}
+
+void insereCPF(HashTable *hashTable, unsigned long cpf) {
+    int colisoes = 0;
+    int index = buscaCPF(hashTable, cpf, &colisoes);
+    if (index == -1) {
+        printf("CPF %lu já está presente na tabela.\n", cpf);
+    } else if (hashTable->tabela[index].ocupado == 0) {
         hashTable->tabela[index].cpf = cpf;
         hashTable->tabela[index].ocupado = 1;
     } else {
@@ -72,28 +91,6 @@ int contaPosicoesVazias(HashTable *hashTable) {
         }
     }
     return vazias;
-}
-
-// Função para buscar um CPF específico na tabela hash e contar colisões durante a busca
-void buscaCPF(HashTable *hashTable, unsigned long cpf) {
-    int index, i = 0, colisoes = 0;
-    do {
-        // Usando a função de divisão como hash principal e dispersão dupla para tratar colisões
-        index = (hashFuncDivisao(cpf, hashTable->tamanho) + i * hashFunc2(cpf, hashTable->tamanho)) % hashTable->tamanho;
-        
-        if (hashTable->tabela[index].ocupado == 0) {
-            // Caso encontre uma posição vazia durante a busca
-            printf("Posição %d está vazia.\n", index);
-        } else if (hashTable->tabela[index].ocupado == 1 && hashTable->tabela[index].cpf == cpf) {
-            printf("CPF %lu encontrado na posição %d com %d colisões durante a busca.\n", cpf, index, colisoes);
-            return;
-        }
-
-        i++;
-        colisoes++;
-    } while (hashTable->tabela[index].ocupado != 0 && i < hashTable->tamanho);
-
-    printf("CPF %lu não encontrado na tabela. Número de colisões durante a busca: %d\n", cpf, colisoes);
 }
 
 int main() {
@@ -141,7 +138,13 @@ int main() {
 
     // Teste de busca de um CPF específico
     printf("\nTeste de busca de CPF:\n");
-    buscaCPF(hashTable, 69997097939); // Insira o CPF que deseja buscar
+    int colisoesBusca = 0;
+    int resultado = buscaCPF(hashTable, 69997097939, &colisoesBusca);
+    if (resultado != -1) {
+        printf("CPF não encontrado. Número de colisões durante a busca: %d\n", colisoesBusca);
+    } else {
+        printf("CPF encontrado com %d colisões durante a busca.\n", colisoesBusca);
+    }
 
     // Libera memória alocada
     free(hashTable->tabela);
