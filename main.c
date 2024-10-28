@@ -94,7 +94,7 @@ int main() {
     }
 
     // Escreve o cabeçalho do CSV
-    fprintf(saida, "Chaves Inseridas,Colisoes\n");
+    fprintf(saida, "CPFs inseridos, Colisoes\n");
 
     unsigned long cpf;
     int insercoes = 0;
