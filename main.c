@@ -1,81 +1,68 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include <math.h> // Biblioteca para a função log
+#include <math.h>
 
-#define TABLE_SIZE 1213 // Número primo para tabela
+#define TAMANHO_TABELA 1231 // Número primo perto de 1200 para tabela
 
 typedef struct {
     unsigned long cpf;
     int ocupado; // 0 = vazio, 1 = ocupado, 2 = removido
-} HashEntry;
+} Hash_Entrada;
 
 typedef struct {
-    HashEntry *tabela;
+    Hash_Entrada *tabela;
     int tamanho;
-} HashTable;
+} HashTabela;
 
 // Função hash usando o método da divisão
 int hashFuncDivisao(unsigned long cpf, int tamanho) {
-    return cpf % tamanho; // Tamanho deve ser um número primo
+    return cpf % tamanho; // Tamanho tem que ser um número primo
 }
 
-// Segunda função hash para dispersão dupla (para endereçamento aberto)
+// Segunda função hash de divisao para dispersão dupla (para endereçamento aberto)
 int hashFunc2(unsigned long cpf, int tamanho) {
-    return 1 + (cpf % (tamanho - 1)); // Deve ser co-prima ao tamanho da tabela
+    return 1 + (cpf % (tamanho - 1));
 }
 
-HashTable *inicializaTabela(int tamanho) {
-    HashTable *hashTable = (HashTable *)malloc(sizeof(HashTable));
-    hashTable->tabela = (HashEntry *)malloc(tamanho * sizeof(HashEntry));
-    hashTable->tamanho = tamanho;
+HashTabela *inicializaTabela(int tamanho) {
+    HashTabela *hash_tabela = (HashTabela *)malloc(sizeof(HashTabela));
+    hash_tabela->tabela = (Hash_Entrada *)malloc(tamanho * sizeof(Hash_Entrada));
+    hash_tabela->tamanho = tamanho;
     for (int i = 0; i < tamanho; i++) {
-        hashTable->tabela[i].ocupado = 0; // Inicializa todas as entradas como vazias
-        hashTable->tabela[i].cpf = 0; // Inicializa o CPF como zero
+        hash_tabela->tabela[i].ocupado = 0; // Inicializa todas as entradas como vazias
+        hash_tabela->tabela[i].cpf = 0; // Inicializa o CPF como zero
     }
-    return hashTable;
+    return hash_tabela;
 }
 
-// Função para buscar um CPF específico na tabela hash e contar colisões durante a busca
-int buscaCPF(HashTable *hashTable, unsigned long cpf, int *colisoes) {
-    int index, i = 0;
-    *colisoes = 0;
+// Função para inserir um CPF na tabela hash
+void insereCPF(HashTabela *hash_tabela, unsigned long cpf) {
+    int tentativa = 0;
+    int index = 0;
+
     do {
-        // Usando a função de divisão como hash principal e dispersão dupla para tratar colisões
-        index = (hashFuncDivisao(cpf, hashTable->tamanho) + i * hashFunc2(cpf, hashTable->tamanho)) % hashTable->tamanho;
+        // Calcula o índice usando hash principal e dispersão dupla
+        index = (hashFuncDivisao(cpf, hash_tabela->tamanho) + tentativa * hashFunc2(cpf, hash_tabela->tamanho)) % hash_tabela->tamanho;
         
-        if (hashTable->tabela[index].ocupado == 0) {
-            // Caso encontre uma posição vazia durante a busca
-            return index; // Retorna a posição vazia para inserção
-        } else if (hashTable->tabela[index].ocupado == 1 && hashTable->tabela[index].cpf == cpf) {
-            return -1; // CPF já existente
+        if (hash_tabela->tabela[index].ocupado == 0) {
+            // Insere o CPF na posição encontrada
+            hash_tabela->tabela[index].cpf = cpf;
+            hash_tabela->tabela[index].ocupado = 1;
+            return;
         }
-
-        i++;
-        (*colisoes)++;
-    } while (hashTable->tabela[index].ocupado != 0 && i < hashTable->tamanho);
-
-    return index; // Retorna a posição encontrada ou o índice final verificado
+        tentativa++;
+    } while (tentativa < hash_tabela->tamanho);
 }
 
-void insereCPF(HashTable *hashTable, unsigned long cpf) {
+int contaColisoes(HashTabela *hash_tabela) {
     int colisoes = 0;
-    int index = buscaCPF(hashTable, cpf, &colisoes);
-    if (index == -1) {
-        printf("CPF %lu já está presente na tabela.\n", cpf);
-    } else if (hashTable->tabela[index].ocupado == 0) {
-        hashTable->tabela[index].cpf = cpf;
-        hashTable->tabela[index].ocupado = 1;
-    } else {
-        printf("Erro: Tabela cheia, não foi possível inserir o CPF %lu.\n", cpf);
-    }
-}
-
-int contaColisoes(HashTable *hashTable) {
-    int colisoes = 0;
-    for (int i = 0; i < hashTable->tamanho; i++) {
-        if (hashTable->tabela[i].ocupado == 1) {
-            int index = hashFuncDivisao(hashTable->tabela[i].cpf, hashTable->tamanho);
-            if (index != i) {
+    for (int i = 0; i < hash_tabela->tamanho; i++) 
+    {
+        if (hash_tabela->tabela[i].ocupado == 1) 
+        {
+            int index = hashFuncDivisao(hash_tabela->tabela[i].cpf, hash_tabela->tamanho); //pega a posicao daquele cpf
+            if (index != i) 
+            {
                 colisoes++;
             }
         }
@@ -83,10 +70,13 @@ int contaColisoes(HashTable *hashTable) {
     return colisoes;
 }
 
-int contaPosicoesVazias(HashTable *hashTable) {
+int contaPosicoesVazias(HashTabela *hash_tabela) 
+{
     int vazias = 0;
-    for (int i = 0; i < hashTable->tamanho; i++) {
-        if (hashTable->tabela[i].ocupado == 0) {
+    for (int i = 0; i < hash_tabela->tamanho; i++) 
+    {
+        if (hash_tabela->tabela[i].ocupado == 0) 
+        {
             vazias++;
         }
     }
@@ -94,61 +84,57 @@ int contaPosicoesVazias(HashTable *hashTable) {
 }
 
 int main() {
-    HashTable *hashTable = inicializaTabela(TABLE_SIZE);
+    HashTabela *hash_tabela = inicializaTabela(TAMANHO_TABELA);
 
     FILE *arquivo = fopen("cpfs.txt", "r");
-    if (arquivo == NULL) {
-        perror("Erro ao abrir o arquivo");
+    if (arquivo == NULL) 
+    {
+        printf("Erro ao abrir o arquivo");
         return 1;
     }
 
     FILE *saida = fopen("colisoes.csv", "w");
-    if (saida == NULL) {
-        perror("Erro ao criar o arquivo CSV");
+    if (saida == NULL) 
+    {
+        printf("Erro ao criar o arquivo CSV");
         return 1;
     }
 
-    // Escreve o cabeçalho do CSV
-    fprintf(saida, "Chaves Inseridas,Colisoes,Log(N)\n");
+    //  cabeçalho do CSV
+    fprintf(saida, "Chaves Inseridas;Colisoes;Hash Acessos;Log(n)-Acessos\n");
 
     unsigned long cpf;
     int insercoes = 0;
+    double logn_acessos_potencia = 0; //a potencia do dois para ser usada na multiplicacao do logn
 
-    while (fscanf(arquivo, "%lu", &cpf) != EOF && insercoes < 1000) {
-        insereCPF(hashTable, cpf); // Usando o método da Divisão com endereçamento aberto e dispersão dupla
+    while (fscanf(arquivo, "%lu", &cpf) != EOF && insercoes < 1000) 
+    {
+        insereCPF(hash_tabela, cpf);
         insercoes++;
 
         if (insercoes % 100 == 0) {
-            int colisoes = contaColisoes(hashTable);
-            double logN = log2(insercoes); // Calcula o logaritmo natural de N (ou seja, ln(N))
-            // Escreve o número de inserções, de colisões e o valor de log(N) no CSV
-            fprintf(saida, "%d,%d,%.3f\n", insercoes, colisoes, logN);
+            int colisoes = contaColisoes(hash_tabela);
+            int hash_acessos = colisoes + 1000;
+            double logn_acessos = pow(2,logn_acessos_potencia) * (logn_acessos_potencia + 1);
+            // Salvando as colunas no CSV
+            fprintf(saida, "%d;%d;%d;%d\n", insercoes, colisoes, hash_acessos, (int)logn_acessos);
+            logn_acessos_potencia++;
         }
     }
 
     fclose(arquivo);
     fclose(saida);
 
-    int colisoesTotais = contaColisoes(hashTable);
-    int posicoesVazias = contaPosicoesVazias(hashTable);
+    int colisoesTotais = contaColisoes(hash_tabela);
+    int posicoesVazias = contaPosicoesVazias(hash_tabela);
 
-    printf("Número de colisões: %d\n", colisoesTotais);
-    printf("Número de posições vazias: %d\n", posicoesVazias);
-    printf("Fator de carga: %.3f\n", 1000.0 / TABLE_SIZE);
-
-    // Teste de busca de um CPF específico
-    printf("\nTeste de busca de CPF:\n");
-    int colisoesBusca = 0;
-    int resultado = buscaCPF(hashTable, 69997097939, &colisoesBusca);
-    if (resultado != -1) {
-        printf("CPF não encontrado. Número de colisões durante a busca: %d\n", colisoesBusca);
-    } else {
-        printf("CPF encontrado com %d colisões durante a busca.\n", colisoesBusca);
-    }
+    printf("Número de colisões apos 1000 insercoes: %d\n", colisoesTotais);
+    printf("Número de posições vazias apos 1000 insercoes: %d\n", posicoesVazias);
+    printf("Fator de carga: %.3f\n", 1000.0 / TAMANHO_TABELA);
 
     // Libera memória alocada
-    free(hashTable->tabela);
-    free(hashTable);
+    free(hash_tabela->tabela);
+    free(hash_tabela);
 
     return 0;
 }
